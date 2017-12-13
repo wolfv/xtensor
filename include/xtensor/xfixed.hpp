@@ -35,29 +35,49 @@ namespace xt
         using iterator = pointer;
         using const_iterator = const_pointer;
 
-        constexpr std::size_t operator[](std::size_t idx) const
+        constexpr const_reference operator[](std::size_t idx) const
         {
             return m_data[idx];
         }
 
         constexpr const_iterator begin() const
         {
-            return m_data;
+            return cbegin();
         }
 
         constexpr const_iterator end() const
         {
-            return m_data + N;
+            return cend();
         }
 
         constexpr const_iterator cbegin() const
         {
-            return begin();
+            return m_data;
         }
 
         constexpr const_iterator cend() const
         {
-            return end();
+            return m_data + N;
+        }
+
+        auto rbegin() const
+        {
+            return crbegin();
+        }
+
+        auto rend() const
+        {
+            return crend();
+        }
+
+        auto crbegin() const
+        {
+            return std::reverse_iterator<const_iterator>(end());
+        }
+
+        auto crend() const
+        {
+            return std::reverse_iterator<const_iterator>(begin());
         }
 
         constexpr const_reference front() const
@@ -77,9 +97,6 @@ namespace xt
 
         T m_data[N ? N : 1];
     };
-
-    // template<class T, std::size_t N>
-    // constexpr T const_array<X...>::m_data[N ? N : 1];
 
     template <std::size_t... X>
     class fixed_shape
@@ -121,7 +138,7 @@ namespace xtl
             using value_type = typename sequence_type::value_type;
             using size_type = typename sequence_type::size_type;
 
-            inline static sequence_type make(size_type /*size*/, value_type v)
+            inline static sequence_type make(size_type /*size*/, value_type /*v*/)
             {
                 return sequence_type();
             }
@@ -208,13 +225,16 @@ namespace xt
     template <class EC, class S, layout_type L, class Tag>
     struct xcontainer_inner_types<xfixed_container<EC, S, L, Tag>>
     {
-        using shape_type = typename S::cast_type;
-        using container_type = std::array<EC, acc(static_cast<shape_type>(S()))>;
-        using strides_type = shape_type;
-        using backstrides_type = shape_type;
-        using inner_shape_type = shape_type;
-        using inner_strides_type = strides_type;
+        using inner_shape_type = typename S::cast_type;
+        using inner_strides_type = inner_shape_type;
+        using backstrides_type = inner_shape_type;
         using inner_backstrides_type = backstrides_type;
+
+        using shape_type = std::array<typename inner_shape_type::value_type,
+                                      std::tuple_size<inner_shape_type>::value>;
+        using strides_type = shape_type;
+
+        using container_type = std::array<EC, acc(static_cast<inner_shape_type>(S()))>;
         using temporary_type = xfixed_container<EC, S, L, Tag>;
         static constexpr layout_type layout = L;
     };
@@ -240,7 +260,7 @@ namespace xt
      * @sa xtensor
      */
     template <class EC, class S, layout_type L, class Tag>
-    class xfixed_container : public xstrided_container<xfixed_container<EC, S, L, Tag>>,
+    class xfixed_container : public xcontainer<xfixed_container<EC, S, L, Tag>>,
                              public xcontainer_semantic<xfixed_container<EC, S, L, Tag>>
     {
     public:
@@ -282,18 +302,26 @@ namespace xt
         template <class E>
         xfixed_container& operator=(const xexpression<E>& e);
 
-        // constexpr auto dimension() const
-        // {
-        //     return shape().size();
-        // }
+        // TODO unclear what to do hear! Maybe test in broadcast if reshape available
+        // or check the shape here in debug mode?
+        template <class ST>
+        void reshape(ST&& s)
+        {
+        }
+
+        template <class ST>
+        bool broadcast_shape(ST& s) const
+        {
+            return xt::broadcast_shape(m_shape, s);
+        }
 
     private:
 
         container_type m_data;
 
-        constexpr static shape_type m_shape = S();
-        constexpr static strides_type m_strides = std::get<0>(get_strides<L>(static_cast<shape_type>(S())));
-        constexpr static backstrides_type m_backstrides = std::get<1>(get_strides<L>(static_cast<shape_type>(S())));
+        constexpr static inner_shape_type m_shape = S();
+        constexpr static inner_strides_type m_strides = std::get<0>(get_strides<L>(static_cast<inner_shape_type>(S())));
+        constexpr static backstrides_type m_backstrides = std::get<1>(get_strides<L>(static_cast<inner_shape_type>(S())));
 
         container_type& data_impl() noexcept;
         const container_type& data_impl() const noexcept;
@@ -305,12 +333,12 @@ namespace xt
 
         constexpr auto& shape_impl() const
         {
-            return m_strides;
+            return m_shape;
         }
 
         constexpr auto& backstrides_impl() const
         {
-            return m_strides;
+            return m_backstrides;
         }
 
 
@@ -319,9 +347,9 @@ namespace xt
 
     // Out of line definitions to prevent linker errors prior to C++17
     template <class EC, class S, layout_type L, class Tag>
-    constexpr typename xfixed_container<EC, S, L, Tag>::shape_type xfixed_container<EC, S, L, Tag>::m_shape;
+    constexpr typename xfixed_container<EC, S, L, Tag>::inner_shape_type xfixed_container<EC, S, L, Tag>::m_shape;
     template <class EC, class S, layout_type L, class Tag>
-    constexpr typename xfixed_container<EC, S, L, Tag>::strides_type xfixed_container<EC, S, L, Tag>::m_strides;
+    constexpr typename xfixed_container<EC, S, L, Tag>::inner_strides_type xfixed_container<EC, S, L, Tag>::m_strides;
     template <class EC, class S, layout_type L, class Tag>
     constexpr typename xfixed_container<EC, S, L, Tag>::backstrides_type xfixed_container<EC, S, L, Tag>::m_backstrides;
 
@@ -426,7 +454,6 @@ namespace xt
      */
     template <class EC, class S, layout_type L, class Tag>
     inline xfixed_container<EC, S, L, Tag>::xfixed_container()
-        : base_type()
     {
     }
 
@@ -435,7 +462,6 @@ namespace xt
      */
     template <class EC, class S, layout_type L, class Tag>
     inline xfixed_container<EC, S, L, Tag>::xfixed_container(nested_initializer_list_t<value_type, N> t)
-        : base_type()
     {
         L == layout_type::row_major ? nested_copy(m_data.begin(), t) : nested_copy(this->template begin<layout_type::row_major>(), t);
     }
@@ -451,7 +477,6 @@ namespace xt
     template <class EC, class S, layout_type L, class Tag>
     template <class E>
     inline xfixed_container<EC, S, L, Tag>::xfixed_container(const xexpression<E>& e)
-        : base_type()
     {
         semantic_base::assign(e);
     }
