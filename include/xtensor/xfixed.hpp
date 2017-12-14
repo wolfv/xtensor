@@ -303,10 +303,10 @@ namespace xt
         template <class E>
         xfixed_container& operator=(const xexpression<E>& e);
 
-        // or check the shape here in debug mode?
         template <class ST>
-        void reshape(ST&& /*s*/)
+        void reshape(ST&& s)
         {
+            (void)(s); // remove unused parameter warning if XTENSOR_ASSERT undefined
             XTENSOR_ASSERT(std::equal(s.begin(), s.end(), m_shape.begin()) && s.size() == m_shape.size());
         }
 

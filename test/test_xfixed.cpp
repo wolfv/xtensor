@@ -15,6 +15,7 @@
 namespace xt
 {
     using xfixed3x3 = xfixed<double, xt::fixed_shape<3, 3>>; 
+    using xfixed3 = xfixed<double, xt::fixed_shape<3>>; 
 
     TEST(xfixed, basic)
     {
@@ -25,5 +26,22 @@ namespace xt
         xfixed3x3 res2 = 2.0 * a;
 
         EXPECT_EQ(res1, res2);
+    }
+
+    TEST(xfixed, broadcast)
+    {
+        xfixed3x3 a({{1,2,3}, {4,5,6}, {7,8,9}});
+        xfixed3 b({4,5,6});
+
+        xfixed3x3 res = a * b;
+        xfixed3x3 resb = b * a;
+
+        xarray<double> ax = a;
+        xarray<double> bx = b;
+        xarray<double> arx = a * b;
+        xarray<double> brx = b * a;
+
+        EXPECT_EQ(res, arx);
+        EXPECT_EQ(resb, brx);
     }
 }
