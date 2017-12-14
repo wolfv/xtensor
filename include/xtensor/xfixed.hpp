@@ -35,6 +35,9 @@ namespace xt
         using iterator = pointer;
         using const_iterator = const_pointer;
 
+        using reverse_iterator = std::reverse_iterator<const_iterator>;
+        using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+
         constexpr const_reference operator[](std::size_t idx) const
         {
             return m_data[idx];
@@ -60,24 +63,25 @@ namespace xt
             return m_data + N;
         }
 
-        auto rbegin() const
+        // TODO make constexpr once C++17 arrives
+        reverse_iterator rbegin() const
         {
             return crbegin();
         }
 
-        auto rend() const
+        reverse_iterator rend() const
         {
             return crend();
         }
 
-        auto crbegin() const
+        const_reverse_iterator crbegin() const
         {
-            return std::reverse_iterator<const_iterator>(end());
+            return const_reverse_iterator(end());
         }
 
-        auto crend() const
+        const_reverse_iterator crend() const
         {
-            return std::reverse_iterator<const_iterator>(begin());
+            return const_reverse_iterator(begin());
         }
 
         constexpr const_reference front() const
@@ -90,7 +94,7 @@ namespace xt
             return m_data[size() - 1];
         }
 
-        constexpr std::size_t size() const
+        constexpr size_type size() const
         {
             return N;
         }
@@ -105,7 +109,6 @@ namespace xt
 
         using cast_type = const_array<std::size_t, sizeof...(X)>;
 
-        constexpr static std::size_t size = sizeof...(X);
         constexpr fixed_shape()
         {
         }
@@ -124,7 +127,6 @@ namespace std
         public integral_constant<size_t, N>
     {
     };
-
 }
 
 namespace xtl
@@ -149,23 +151,12 @@ namespace xtl
 namespace xt
 {
 
-    /***********************
-     * xtensor declaration *
-     ***********************/
+    /**********************
+     * xfixed declaration *
+     **********************/
 
     template <class EC, class S, layout_type L, class Tag>
     class xfixed_container;
-
-    template <class S>
-    constexpr std::size_t acc(const S&& si)
-    {
-        std::size_t result = 1;
-        for (auto it = si.begin(); it != si.end(); ++it)
-        {
-            result *= *it;
-        }
-        return result;
-    }
 
     namespace detail
     {
@@ -202,24 +193,35 @@ namespace xt
         }
 
         template <layout_type L, class T, std::size_t... I>
-        constexpr std::tuple<T, T> get_strides_impl(T& shape, std::index_sequence<I...>)
+        constexpr T get_strides_impl(T& shape, std::index_sequence<I...>)
         {
             static_assert(((L == layout_type::row_major) || (L == layout_type::column_major)), 
                           "Layout not supported for fixed objects");
+            return T({calculate_stride(shape, I, L)...});
+        }
 
-            T strides({calculate_stride(shape, I, L)...});
-            T backstrides({(strides[I] * (shape[I] - 1))...});
-            return std::make_tuple(strides, backstrides);
+        template <class T, std::size_t... I>
+        constexpr T get_backstrides_impl(T& shape, T& strides, std::index_sequence<I...>)
+        {
+            return T({(strides[I] * (shape[I] - 1))...});
         }
     }
 
     // returns strides & backstrides in a tuple
     template <layout_type L, class T>
-    constexpr std::tuple<T, T> get_strides(T&& shape)
+    constexpr T get_strides(T& shape)
     {
         constexpr std::size_t sz = std::tuple_size<T>::value;
         auto index_sequence = std::make_index_sequence<sz>{};
         return detail::get_strides_impl<L>(shape, index_sequence);
+    }
+
+    template <class T>
+    constexpr T get_backstrides(T& shape, T& strides)
+    {
+        constexpr std::size_t sz = std::tuple_size<T>::value;
+        auto index_sequence = std::make_index_sequence<sz>{};
+        return detail::get_backstrides_impl(shape, strides, index_sequence);
     }
 
     template <class EC, class S, layout_type L, class Tag>
@@ -234,7 +236,7 @@ namespace xt
                                       std::tuple_size<inner_shape_type>::value>;
         using strides_type = shape_type;
 
-        using container_type = std::array<EC, acc(static_cast<inner_shape_type>(S()))>;
+        using container_type = std::array<EC, compute_size(static_cast<inner_shape_type>(S()))>;
         using temporary_type = xfixed_container<EC, S, L, Tag>;
         static constexpr layout_type layout = L;
     };
@@ -320,8 +322,8 @@ namespace xt
         container_type m_data;
 
         constexpr static inner_shape_type m_shape = S();
-        constexpr static inner_strides_type m_strides = std::get<0>(get_strides<L>(static_cast<inner_shape_type>(S())));
-        constexpr static backstrides_type m_backstrides = std::get<1>(get_strides<L>(static_cast<inner_shape_type>(S())));
+        constexpr static inner_strides_type m_strides = get_strides<L>(m_shape);
+        constexpr static backstrides_type m_backstrides = get_backstrides(m_shape, m_strides);
 
         container_type& data_impl() noexcept;
         const container_type& data_impl() const noexcept;

@@ -1210,7 +1210,7 @@ namespace xt
         template <class C, class S>
         inline void resize_data_container(C& c, S size)
         {
-            c.resize(size);
+            xt::resize_container(c, size);
         }
 
         template <class C, class S>
