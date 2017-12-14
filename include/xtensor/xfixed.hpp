@@ -123,7 +123,7 @@ namespace xt
 namespace std
 {
     template <class T, size_t N>
-    class std::tuple_size<xt::const_array<T, N>> :
+    class tuple_size<xt::const_array<T, N>> :
         public integral_constant<size_t, N>
     {
     };
@@ -161,7 +161,7 @@ namespace xt
     namespace detail
     {
         template <class T>
-        constexpr auto calculate_stride(T& shape, std::size_t idx, layout_type L)
+        constexpr std::size_t calculate_stride(T& shape, std::size_t idx, layout_type L)
         {
             if (shape[idx] == 1)
             {
@@ -231,11 +231,9 @@ namespace xt
         using inner_strides_type = inner_shape_type;
         using backstrides_type = inner_shape_type;
         using inner_backstrides_type = backstrides_type;
-
         using shape_type = std::array<typename inner_shape_type::value_type,
                                       std::tuple_size<inner_shape_type>::value>;
         using strides_type = shape_type;
-
         using container_type = std::array<EC, compute_size(static_cast<inner_shape_type>(S()))>;
         using temporary_type = xfixed_container<EC, S, L, Tag>;
         static constexpr layout_type layout = L;
@@ -268,7 +266,7 @@ namespace xt
     public:
 
         using self_type = xfixed_container<EC, S, L, Tag>;
-        using base_type = xstrided_container<self_type>;
+        using base_type = xcontainer<self_type>;
         using semantic_base = xcontainer_semantic<self_type>;
 
         using container_type = typename base_type::container_type;
@@ -281,6 +279,7 @@ namespace xt
         using inner_shape_type = typename base_type::inner_shape_type;
         using strides_type = typename base_type::strides_type;
         using backstrides_type = typename base_type::backstrides_type;
+        using inner_backstrides_type = typename base_type::inner_backstrides_type;
         using inner_strides_type = typename base_type::inner_strides_type;
         using temporary_type = typename semantic_base::temporary_type;
         using expression_tag = Tag;
@@ -304,11 +303,11 @@ namespace xt
         template <class E>
         xfixed_container& operator=(const xexpression<E>& e);
 
-        // TODO unclear what to do hear! Maybe test in broadcast if reshape available
         // or check the shape here in debug mode?
         template <class ST>
-        void reshape(ST&& s)
+        void reshape(ST&& /*s*/)
         {
+            XTENSOR_ASSERT(std::equal(s.begin(), s.end(), m_shape.begin()) && s.size() == m_shape.size());
         }
 
         template <class ST>
@@ -323,26 +322,14 @@ namespace xt
 
         constexpr static inner_shape_type m_shape = S();
         constexpr static inner_strides_type m_strides = get_strides<L>(m_shape);
-        constexpr static backstrides_type m_backstrides = get_backstrides(m_shape, m_strides);
+        constexpr static inner_backstrides_type m_backstrides = get_backstrides(m_shape, m_strides);
 
         container_type& data_impl() noexcept;
         const container_type& data_impl() const noexcept;
 
-        constexpr auto& strides_impl() const
-        {
-            return m_strides;
-        }
-
-        constexpr auto& shape_impl() const
-        {
-            return m_shape;
-        }
-
-        constexpr auto& backstrides_impl() const
-        {
-            return m_backstrides;
-        }
-
+        constexpr const inner_shape_type& shape_impl() const noexcept;
+        constexpr const inner_strides_type& strides_impl() const noexcept;
+        constexpr const inner_backstrides_type& backstrides_impl() const noexcept;
 
         friend class xcontainer<xfixed_container<EC, S, L, Tag>>;
     };
@@ -350,14 +337,16 @@ namespace xt
     // Out of line definitions to prevent linker errors prior to C++17
     template <class EC, class S, layout_type L, class Tag>
     constexpr typename xfixed_container<EC, S, L, Tag>::inner_shape_type xfixed_container<EC, S, L, Tag>::m_shape;
+
     template <class EC, class S, layout_type L, class Tag>
     constexpr typename xfixed_container<EC, S, L, Tag>::inner_strides_type xfixed_container<EC, S, L, Tag>::m_strides;
-    template <class EC, class S, layout_type L, class Tag>
-    constexpr typename xfixed_container<EC, S, L, Tag>::backstrides_type xfixed_container<EC, S, L, Tag>::m_backstrides;
 
-    /*****************************************
+    template <class EC, class S, layout_type L, class Tag>
+    constexpr typename xfixed_container<EC, S, L, Tag>::inner_backstrides_type xfixed_container<EC, S, L, Tag>::m_backstrides;
+
+    /****************************************
      * xfixed_container_adaptor declaration *
-     *****************************************/
+     ****************************************/
 
     template <class EC, class S, layout_type L, class Tag>
     class xfixed_adaptor;
@@ -398,7 +387,7 @@ namespace xt
      * @tparam Tag The expression tag.
      */
     template <class EC, class S, layout_type L, class Tag>
-    class xfixed_adaptor : public xstrided_container<xfixed_adaptor<EC, S, L, Tag>>,
+    class xfixed_adaptor : public xcontainer<xfixed_adaptor<EC, S, L, Tag>>,
                            public xcontainer_semantic<xfixed_adaptor<EC, S, L, Tag>>
     {
     public:
@@ -406,12 +395,15 @@ namespace xt
         using container_closure_type = EC;
 
         using self_type = xfixed_adaptor<EC, S, L, Tag>;
-        using base_type = xstrided_container<self_type>;
+        using base_type = xcontainer<self_type>;
         using semantic_base = xcontainer_semantic<self_type>;
         using container_type = typename base_type::container_type;
         using shape_type = typename base_type::shape_type;
         using strides_type = typename base_type::strides_type;
         using backstrides_type = typename base_type::backstrides_type;
+        using inner_shape_type = typename base_type::inner_shape_type;
+        using inner_strides_type = typename base_type::inner_strides_type;
+        using inner_backstrides_type = typename base_type::inner_backstrides_type;
         using temporary_type = typename semantic_base::temporary_type;
         using expression_tag = Tag;
 
@@ -437,11 +429,29 @@ namespace xt
 
         container_closure_type m_data;
 
+        constexpr static inner_shape_type m_shape = S();
+        constexpr static inner_strides_type m_strides = get_strides<L>(m_shape);
+        constexpr static inner_backstrides_type m_backstrides = get_backstrides(m_shape, m_strides);
+
         container_type& data_impl() noexcept;
         const container_type& data_impl() const noexcept;
 
+        constexpr const inner_shape_type& shape_impl() const noexcept;
+        constexpr const inner_strides_type& strides_impl() const noexcept;
+        constexpr const inner_backstrides_type&  backstrides_impl() const noexcept;
+
         friend class xcontainer<xfixed_adaptor<EC, S, L, Tag>>;
     };
+
+    // Out of line definitions to prevent linker errors prior to C++17
+    template <class EC, class S, layout_type L, class Tag>
+    constexpr typename xfixed_adaptor<EC, S, L, Tag>::inner_shape_type xfixed_adaptor<EC, S, L, Tag>::m_shape;
+
+    template <class EC, class S, layout_type L, class Tag>
+    constexpr typename xfixed_adaptor<EC, S, L, Tag>::inner_strides_type xfixed_adaptor<EC, S, L, Tag>::m_strides;
+
+    template <class EC, class S, layout_type L, class Tag>
+    constexpr typename xfixed_adaptor<EC, S, L, Tag>::inner_backstrides_type xfixed_adaptor<EC, S, L, Tag>::m_backstrides;
 
     /************************************
      * xfixed_container implementation *
@@ -504,6 +514,24 @@ namespace xt
     inline auto xfixed_container<EC, S, L, Tag>::data_impl() const noexcept -> const container_type&
     {
         return m_data;
+    }
+
+    template <class EC, class S, layout_type L, class Tag>
+    constexpr auto xfixed_container<EC, S, L, Tag>::shape_impl() const noexcept -> const inner_shape_type&
+    {
+        return m_shape;
+    }
+
+    template <class EC, class S, layout_type L, class Tag>
+    constexpr auto xfixed_container<EC, S, L, Tag>::strides_impl() const noexcept -> const inner_strides_type&
+    {
+        return m_strides;
+    }
+
+    template <class EC, class S, layout_type L, class Tag>
+    constexpr auto xfixed_container<EC, S, L, Tag>::backstrides_impl() const noexcept -> const inner_backstrides_type&
+    {
+        return m_backstrides;
     }
 
     /*******************
@@ -598,6 +626,24 @@ namespace xt
     inline auto xfixed_adaptor<EC, S, L, Tag>::data_impl() const noexcept -> const container_type&
     {
         return m_data;
+    }
+
+    template <class EC, class S, layout_type L, class Tag>
+    constexpr auto xfixed_adaptor<EC, S, L, Tag>::shape_impl() const noexcept -> const inner_shape_type&
+    {
+        return m_shape;
+    }
+
+    template <class EC, class S, layout_type L, class Tag>
+    constexpr auto xfixed_adaptor<EC, S, L, Tag>::strides_impl() const noexcept -> const inner_strides_type&
+    {
+        return m_strides;
+    }
+
+    template <class EC, class S, layout_type L, class Tag>
+    constexpr auto xfixed_adaptor<EC, S, L, Tag>::backstrides_impl() const noexcept -> const inner_backstrides_type&
+    {
+        return m_backstrides;
     }
 }
 

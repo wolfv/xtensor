@@ -98,6 +98,7 @@ set(XTENSOR_TESTS
     test_xeval.cpp
     test_xexception.cpp
     test_xfunction.cpp
+    test_xfixed.cpp
     test_xindex_view.cpp
     test_xinfo.cpp
     test_xiterator.cpp
