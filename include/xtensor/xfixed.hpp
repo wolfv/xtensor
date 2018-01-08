@@ -287,9 +287,7 @@ namespace xt
     constexpr const_array<std::size_t, sizeof...(X)> get_strides(const fixed_shape<X...>& shape)
     {
         // constexpr std::size_t sz = std::tuple_size<T>::value;
-        constexpr std::size_t sz = fixed_shape<X...>::size();
-        auto index_sequence = std::make_index_sequence<sz>{};
-        return detail::get_strides_impl<L>(shape, index_sequence);
+        return detail::get_strides_impl<L>(shape, std::make_index_sequence<sizeof...(X)>{});
     }
 
     template <class T>
