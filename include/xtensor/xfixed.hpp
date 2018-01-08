@@ -287,15 +287,17 @@ namespace xt
     constexpr const_array<std::size_t, sizeof...(X)> get_strides(const fixed_shape<X...>& shape)
     {
         // constexpr std::size_t sz = std::tuple_size<T>::value;
+        // constexpr std::size_t sz = fixed_shape<X...>::size();
+        // auto index_sequence = ;
         return detail::get_strides_impl<L>(shape, std::make_index_sequence<sizeof...(X)>{});
     }
 
     template <class T>
     constexpr T get_backstrides(const T& shape, const T& strides)
     {
-        constexpr std::size_t sz = std::tuple_size<T>::value;
-        auto index_sequence = std::make_index_sequence<sz>{};
-        return detail::get_backstrides_impl(shape, strides, index_sequence);
+        // constexpr std::size_t sz = std::tuple_size<T>::value;
+        // auto index_sequence = ;
+        return detail::get_backstrides_impl(shape, strides, std::make_index_sequence<shape.size()>{});
     }
 
     template <class EC, class S, layout_type L, class Tag>
