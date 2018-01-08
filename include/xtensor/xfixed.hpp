@@ -109,6 +109,11 @@ namespace xt
 
         using cast_type = const_array<std::size_t, sizeof...(X)>;
 
+        constexpr static std::size_t size()
+        {
+            return sizeof...(X);
+        }
+
         constexpr fixed_shape()
         {
         }
@@ -160,64 +165,135 @@ namespace xt
 
     namespace detail
     {
-        template <class T>
-        constexpr std::size_t calculate_stride(T& shape, std::size_t idx, layout_type L)
+        // template <class T>
+        // constexpr std::size_t calculate_stride(T& shape, std::size_t idx, layout_type L)
+        // {
+        //     if (shape[idx] == 1)
+        //     {
+        //         return std::size_t(0);
+        //     }
+
+        //     std::size_t data_size = 1;
+        //     std::size_t stride = 1;
+        //     if (L == layout_type::row_major)
+        //     {
+        //         // because we have a integer sequence that counts
+        //         // from 0 to sz - 1, we need to "invert" idx here
+        //         idx = shape.size() - idx;
+        //         for (std::size_t i = idx; i != 0; --i)
+        //         {
+        //             stride = data_size;
+        //             data_size = stride * shape[i - 1];
+        //         }
+        //     }
+        //     else
+        //     {
+        //         for (std::size_t i = 0; i < idx + 1; ++i)
+        //         {
+        //             stride = data_size;
+        //             data_size = stride * shape[i];
+        //         }
+        //     }
+        //     return stride;
+        // }
+
+        template <layout_type L, std::size_t I, std::size_t... X>
+        struct calculate_stride;
+
+        template <std::size_t I, std::size_t Y, std::size_t... X>
+        struct calculate_stride<layout_type::column_major, I, Y, X...>
         {
-            if (shape[idx] == 1)
-            {
-                return std::size_t(0);
-            }
+            constexpr static std::size_t value = Y * 
+                (calculate_stride<layout_type::column_major, I - 1, X...>::value == 0 ? 1 : calculate_stride<layout_type::column_major, I - 1, X...>::value);
+        };
 
-            std::size_t data_size = 1;
-            std::size_t stride = 1;
-            if (L == layout_type::row_major)    
-            {
-                // because we have a integer sequence that counts
-                // from 0 to sz - 1, we need to "invert" idx here
-                idx = shape.size() - idx;
-                for (std::size_t i = idx; i != 0; --i)
-                {
-                    stride = data_size;
-                    data_size = stride * shape[i - 1];
-                }
-            }
-            else
-            {
-                for (std::size_t i = 0; i < idx + 1; ++i)
-                {
-                    stride = data_size;
-                    data_size = stride * shape[i];
-                }
-            }
-            return stride;
-        }
+        template <std::size_t I, std::size_t... X>
+        struct calculate_stride<layout_type::column_major, I, 1, X...>
+        {
+            constexpr static std::size_t value = 0;
+        };
 
-        template <layout_type L, class T, std::size_t... I>
-        constexpr T get_strides_impl(T& shape, std::index_sequence<I...>)
+        template <std::size_t Y, std::size_t... X>
+        struct calculate_stride<layout_type::column_major, 0, Y, X...>
+        {
+            constexpr static std::size_t value = 1;
+        };
+
+        template <std::size_t IDX, std::size_t... X>
+        struct at
+        {
+            constexpr static std::size_t arr[sizeof...(X)] = {X...};
+            constexpr static std::size_t value = arr[IDX];
+        };
+
+        template <std::size_t I, std::size_t... X>
+        struct calculate_stride_row_major
+        {
+            constexpr static std::size_t value = (at<sizeof...(X) - I - 1, X...>::value == 1 ? 0 : at<sizeof...(X) - I - 1, X...>::value) * 
+                (calculate_stride_row_major<I - 1, X...>::value == 0 ? 
+                    1 : calculate_stride_row_major<I - 1, X...>::value);
+        };
+
+        template <std::size_t... X>
+        struct calculate_stride_row_major<0, X...>
+        {
+            constexpr static std::size_t value = 1;
+        };
+
+        template <std::size_t I, std::size_t... X>
+        struct calculate_stride<layout_type::row_major, I, X...>
+        {
+            constexpr static std::size_t value = calculate_stride_row_major<sizeof...(X) - I - 1, X...>::value;
+        };
+
+        template <layout_type L, std::size_t... X, std::size_t... I>
+        constexpr xt::const_array<std::size_t, sizeof...(X)> get_strides_impl(const xt::fixed_shape<X...>& shape, std::index_sequence<I...>)
         {
             static_assert(((L == layout_type::row_major) || (L == layout_type::column_major)), 
                           "Layout not supported for fixed objects");
-            return T({calculate_stride(shape, I, L)...});
+            return xt::const_array<std::size_t, sizeof...(X)>{calculate_stride<L, I, X...>::value...};
         }
 
         template <class T, std::size_t... I>
-        constexpr T get_backstrides_impl(T& shape, T& strides, std::index_sequence<I...>)
+        constexpr T get_backstrides_impl(const T& shape, const T& strides, std::index_sequence<I...>)
         {
             return T({(strides[I] * (shape[I] - 1))...});
+        }
+
+        template <std::size_t... X>
+        struct compute_size_impl;
+
+        template <std::size_t Y, std::size_t... X>
+        struct compute_size_impl<Y, X...>
+        {
+            constexpr static std::size_t value = Y * compute_size_impl<X...>::value;
+        };
+
+        template <std::size_t X>
+        struct compute_size_impl<X>
+        {
+            constexpr static std::size_t value = X;
+        };
+
+        template <std::size_t... X>
+        constexpr std::size_t compute_size(const fixed_shape<X...>& /*s*/)
+        {
+            return compute_size_impl<X...>::value;
         }
     }
 
     // returns strides & backstrides in a tuple
-    template <layout_type L, class T>
-    constexpr T get_strides(T& shape)
+    template <layout_type L, std::size_t... X>
+    constexpr const_array<std::size_t, sizeof...(X)> get_strides(const fixed_shape<X...>& shape)
     {
-        constexpr std::size_t sz = std::tuple_size<T>::value;
+        // constexpr std::size_t sz = std::tuple_size<T>::value;
+        constexpr std::size_t sz = fixed_shape<X...>::size();
         auto index_sequence = std::make_index_sequence<sz>{};
         return detail::get_strides_impl<L>(shape, index_sequence);
     }
 
     template <class T>
-    constexpr T get_backstrides(T& shape, T& strides)
+    constexpr T get_backstrides(const T& shape, const T& strides)
     {
         constexpr std::size_t sz = std::tuple_size<T>::value;
         auto index_sequence = std::make_index_sequence<sz>{};
@@ -234,7 +310,7 @@ namespace xt
         using shape_type = std::array<typename inner_shape_type::value_type,
                                       std::tuple_size<inner_shape_type>::value>;
         using strides_type = shape_type;
-        using container_type = std::array<EC, compute_size(static_cast<inner_shape_type>(S()))>;
+        using container_type = std::array<EC, detail::compute_size(S())>;
         using temporary_type = xfixed_container<EC, S, L, Tag>;
         static constexpr layout_type layout = L;
     };
@@ -321,7 +397,7 @@ namespace xt
         container_type m_data;
 
         constexpr static inner_shape_type m_shape = S();
-        constexpr static inner_strides_type m_strides = get_strides<L>(m_shape);
+        constexpr static inner_strides_type m_strides = get_strides<L>(S());
         constexpr static inner_backstrides_type m_backstrides = get_backstrides(m_shape, m_strides);
 
         container_type& data_impl() noexcept;
