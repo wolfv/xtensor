@@ -99,7 +99,7 @@ namespace xt
             return N;
         }
 
-        T m_data[N ? N : 1];
+        const T m_data[N ? N : 1];
     };
 
     template <std::size_t... X>
@@ -276,11 +276,14 @@ namespace xt
             constexpr static std::size_t value = X;
         };
 
+        template <class T>
+        struct compute_size;
+
         template <std::size_t... X>
-        constexpr std::size_t compute_size(const fixed_shape<X...>& /*s*/)
+        struct compute_size<xt::fixed_shape<X...>>
         {
-            return compute_size_impl<X...>::value;
-        }
+            constexpr static std::size_t value = compute_size_impl<X...>::value;
+        };
     }
 
     template <layout_type L, std::size_t... X>
@@ -306,7 +309,7 @@ namespace xt
         using shape_type = std::array<typename inner_shape_type::value_type,
                                       std::tuple_size<inner_shape_type>::value>;
         using strides_type = shape_type;
-        using container_type = std::array<EC, detail::compute_size(S())>;
+        using container_type = std::array<EC, detail::compute_size<S>::value>;
         using temporary_type = xfixed_container<EC, S, L, Tag>;
         static constexpr layout_type layout = L;
     };
