@@ -326,6 +326,23 @@ namespace xt
     template <class E1, class E2>
     inline void xexpression_assigner<Tag>::assign_xexpression(xexpression<E1>& e1, const xexpression<E2>& e2)
     {
+        using e1_shape = typename E1::shape_type;
+        using e2_shape = typename E2::shape_type;
+
+        //constexpr bool purely_fixed = detail::only_fixed<e1_shape, e2_shape>::value;
+        using test = std::enable_if_t<detail::only_fixed<e1_shape, e2_shape>::value>;
+        using result_shape = typename detail::broadcast_fixed_shape<e1_shape, e2_shape>::type;
+
+        /*if(purely_fixed){
+            //using result_shape = typename detail::broadcast_fixed_shape<e1_shape, e2_shape>::type;
+            //Staticly check that result_shape \cong e1_shape, else throw
+            //trivial_broadcast iff result_shape is e2_shape
+            constexpr bool trivial_broadcast = true;
+            base_type::assign_data(e1, e2, trivial_broadcast);
+        } else{
+            bool trivial_broadcast = resize(e1, e2);
+            base_type::assign_data(e1, e2, trivial_broadcast);
+        }*/
         bool trivial_broadcast = resize(e1, e2);
         base_type::assign_data(e1, e2, trivial_broadcast);
     }
