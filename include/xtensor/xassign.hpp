@@ -321,6 +321,23 @@ namespace xt
     template <class E1, class E2>
     inline void xexpression_assigner<Tag>::assign_xexpression(xexpression<E1>& e1, const xexpression<E2>& e2)
     {
+        using e1_shape = typename E1::shape_type;
+        using e2_shape = typename E2::shape_type;
+
+        //constexpr bool purely_fixed = detail::only_fixed<e1_shape, e2_shape>::value;
+        using test = std::enable_if_t<detail::only_fixed<e1_shape, e2_shape>::value>;
+        using result_shape = typename detail::broadcast_fixed_shape<e1_shape, e2_shape>::type;
+
+        /*if(purely_fixed){
+            //using result_shape = typename detail::broadcast_fixed_shape<e1_shape, e2_shape>::type;
+            //Staticly check that result_shape \cong e1_shape, else throw
+            //trivial_broadcast iff result_shape is e2_shape
+            constexpr bool trivial_broadcast = true;
+            base_type::assign_data(e1, e2, trivial_broadcast);
+        } else{
+            bool trivial_broadcast = resize(e1, e2);
+            base_type::assign_data(e1, e2, trivial_broadcast);
+        }*/
         bool trivial_broadcast = resize(e1, e2);
         base_type::assign_data(e1, e2, trivial_broadcast);
     }
@@ -625,7 +642,7 @@ namespace xt
                 return m_cut;
             }
 
-        private: 
+        private:
 
             std::size_t m_cut;
             const strides_type& m_strides;
@@ -636,7 +653,7 @@ namespace xt
         {
             std::size_t cut = 0;
 
-            // TODO! if E1 is !contigous --> initialize cut to sensible value! 
+            // TODO! if E1 is !contigous --> initialize cut to sensible value!
             if (e1.strides().back() == 1)
             {
                 auto csf = check_strides_functor<layout_type::row_major, decltype(e1.strides())>(e1.strides());
@@ -724,8 +741,8 @@ namespace xt
 
         auto fct_stepper = e2.stepper_begin(e1.shape());
         auto res_stepper = e1.stepper_begin(e1.shape());
-    
-        // TODO in 1D case this is ambigous -- could be RM or CM. 
+
+        // TODO in 1D case this is ambigous -- could be RM or CM.
         //      Use default layout to make decision
         std::size_t step_dim = 0;
         if (!is_row_major) // row major case
