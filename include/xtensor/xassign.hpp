@@ -327,7 +327,7 @@ namespace xt
     inline void xexpression_assigner<Tag>::assign_xexpression(xexpression<E1>& e1, const xexpression<E2>& e2)
     {
         bool trivial_broadcast = resize(e1, e2);
-        base_type::assign_data(e1, e2, true);
+        base_type::assign_data(e1, e2, trivial_broadcast);
     }
 
     template <class Tag>
