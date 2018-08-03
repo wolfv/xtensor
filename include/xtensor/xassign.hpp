@@ -196,11 +196,11 @@ namespace xt
                     || e2.is_trivial_broadcast(e1.strides());
         }
 
-        template <class D, class E2, class... SL>
-        inline bool is_trivial_broadcast(const xview<D, SL...>&, const E2&)
-        {
-            return false;
-        }
+        // template <class D, class E2, class... SL>
+        // inline bool is_trivial_broadcast(const xview<D, SL...>&, const E2&)
+        // {
+        //     return xview<D, SL...>::contiguous_layout;
+        // }
 
         template <class E, class = void_t<>>
         struct forbid_simd_assign
@@ -300,7 +300,8 @@ namespace xt
         const E2& de2 = e2.derived_cast();
 
         bool trivial_broadcast = trivial && detail::is_trivial_broadcast(de1, de2);
-
+        // std::cout << detail::is_trivial_broadcast(de1, de2);
+        // std::cout << "IS TRIVIAL: " << trivial_broadcast << std::endl;
         if (trivial_broadcast)
         {
             constexpr bool simd_assign = xassign_traits<E1, E2>::simd_assign();
@@ -497,8 +498,8 @@ namespace xt
         template <class E1, class E2>
         inline void trivial_assigner_run_impl(E1& e1, const E2& e2, std::true_type)
         {
-            auto src = e2.storage_cbegin();
-            auto dst = e1.storage_begin();
+            auto src = detail::trivial_begin(e2);
+            auto dst = detail::trivial_begin(e1);
             assign_loop<typename E1::value_type>(src, dst, e1.size());
         }
 
