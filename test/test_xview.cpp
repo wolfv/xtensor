@@ -766,10 +766,20 @@ namespace xt
             { 5, 6 }
         };
         auto row = xt::view(a, 1, xt::all());
-        bool cond1 = std::is_same<decltype(row)::strides_type, std::array<std::ptrdiff_t, 1>>::value;
-        bool cond2 = std::is_same<decltype(row.strides()), const xt::container_offset_view<std::array<std::ptrdiff_t, 2>, 1, -1>&>::value;
-        EXPECT_TRUE(cond1);
-        EXPECT_TRUE(cond2);
+        if (a.layout() == layout_type::row_major)
+        {
+            bool cond1 = std::is_same<decltype(row)::strides_type, std::array<std::ptrdiff_t, 1>>::value;
+            bool cond2 = std::is_same<decltype(row.strides()), const xt::container_offset_view<std::array<std::ptrdiff_t, 2>, 1, -1>&>::value;
+            EXPECT_TRUE(cond1);
+            EXPECT_TRUE(cond2);
+        }
+        else
+        {
+            bool cond1 = std::is_same<decltype(row)::strides_type, std::array<std::ptrdiff_t, 1>>::value;
+            bool cond2 = std::is_same<decltype(row.strides()), const std::array<std::ptrdiff_t, 1>&>::value;
+            EXPECT_TRUE(cond1);
+            EXPECT_TRUE(cond2);
+        }
     }
 
     TEST(xview, transpose)

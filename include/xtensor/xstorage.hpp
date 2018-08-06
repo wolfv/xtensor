@@ -1498,7 +1498,9 @@ namespace xt
         using value_type = typename E::value_type;
         using size_type = typename E::size_type;
 
-        container_offset_view(const E& container)
+        static_assert(End == -1, "End != -1 not yet implemented.");
+
+        explicit container_offset_view(const E& container)
             : m_original_container(container)
         {
         }
@@ -1601,6 +1603,18 @@ namespace xt
     private:
         const E& m_original_container;
     };
+
+    template <class E, std::ptrdiff_t SE, std::ptrdiff_t EE>
+    bool operator==(const container_offset_view<E, SE, EE>& lhs, const container_offset_view<E, SE, EE>& rhs)
+    {
+        return lhs.size() == rhs.size() && std::equal(lhs.begin(), lhs.end(), rhs.begin());
+    }
+
+    template <class E, std::ptrdiff_t SE, std::ptrdiff_t EE>
+    bool operator!=(const container_offset_view<E, SE, EE>& lhs, const container_offset_view<E, SE, EE>& rhs)
+    {
+        return !(lhs == rhs);
+    }
 }
 
 
