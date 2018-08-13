@@ -108,42 +108,42 @@ namespace xt
         template <std::size_t IX, class A, class B>
         struct broadcast_fixed_shape_cmp_impl;
 
-        template <std::size_t IX, std::size_t... I, std::size_t... J>
-        struct broadcast_fixed_shape_cmp_impl<IX, fixed_shape<I...>, fixed_shape<J...>>
+        template <std::size_t JX, std::size_t... I, std::size_t... J>
+        struct broadcast_fixed_shape_cmp_impl<JX, fixed_shape<I...>, fixed_shape<J...>>
         {
             //We line the shapes up from the last index
-            //JX may underflow, thus being a very large number
-            static constexpr std::size_t JX = IX - (sizeof...(I) - sizeof...(J));
+            //IX may underflow, thus being a very large number
+            static constexpr std::size_t IX = JX - (sizeof...(I) - sizeof...(J));
 
             //Out of bounds access gives value 0
             static constexpr std::size_t I_v = at<IX, I...>::value;
             static constexpr std::size_t J_v = at<JX, J...>::value;
 
             // we're statically checking if the broadcast shapes are either one on either of them or equal
-            static_assert(!J_v ||  I_v == 1 || J_v == 1 || J_v == I_v, "broadcast shapes do not match.");
+            static_assert(!I_v ||  I_v == 1 || J_v == 1 || J_v == I_v, "broadcast shapes do not match.");
 
             static constexpr std::size_t ordinate = std::max(I_v, J_v);
             static constexpr bool value = (I_v == J_v);
         };
 
-        template <std::size_t... IX, std::size_t... I, std::size_t... J>
-        struct broadcast_fixed_shape_impl<std::index_sequence<IX...>, fixed_shape<I...>, fixed_shape<J...>>
+        template <std::size_t... JX, std::size_t... I, std::size_t... J>
+        struct broadcast_fixed_shape_impl<std::index_sequence<JX...>, fixed_shape<I...>, fixed_shape<J...>>
         {
-            static_assert(sizeof... (I) >= sizeof... (J), "broadcast shapes do not match.");
+            static_assert(sizeof... (J) >= sizeof... (I), "broadcast shapes do not match.");
 
-            using type = xt::fixed_shape<broadcast_fixed_shape_cmp_impl<IX, fixed_shape<I...>, fixed_shape<J...>>::ordinate...>;
-            static constexpr bool value = xtl::conjunction<broadcast_fixed_shape_cmp_impl<IX, fixed_shape<I...>, fixed_shape<J...>>...>::value;
+            using type = xt::fixed_shape<broadcast_fixed_shape_cmp_impl<JX, fixed_shape<I...>, fixed_shape<J...>>::ordinate...>;
+            static constexpr bool value = xtl::conjunction<broadcast_fixed_shape_cmp_impl<JX, fixed_shape<I...>, fixed_shape<J...>>...>::value;
         };
 
         /* broadcast_fixed_shape<fixed_shape<I...>, fixed_shape<J...>>
          * Just like a call to broadcast_shape(cont S1& input, S2& output),
          * except that the result shape is alised as type, and the returned
-         * bool is the member value. Asserts on an illegal broadcase, including
+         * bool is the member value. Asserts on an illegal broadcast, including
          * the case where pack J is longer than pack I. */
 
         template <std::size_t... I, std::size_t... J>
         struct broadcast_fixed_shape<fixed_shape<I...>, fixed_shape<J...>>
-            : broadcast_fixed_shape_impl<std::make_index_sequence<sizeof...(I)>, fixed_shape<I...>, fixed_shape<J...>> {};
+            : broadcast_fixed_shape_impl<std::make_index_sequence<sizeof...(J)>, fixed_shape<I...>, fixed_shape<J...>> {};
 
         // Simple is_array and only_array meta-functions
         template <class S>
@@ -235,7 +235,7 @@ namespace xt
         struct promote_fixed<fixed_shape<I...>, fixed_shape<J...>, S...>
         {
         private:
-            using intermediate = std::conditional_t< (sizeof... (J) > sizeof... (I)),
+            using intermediate = std::conditional_t< (sizeof... (I) > sizeof... (J)),
                 broadcast_fixed_shape<fixed_shape<J...>, fixed_shape<I...>>,
                 broadcast_fixed_shape<fixed_shape<I...>, fixed_shape<J...>>>;
             using result = promote_fixed<typename intermediate::type, S...>;
