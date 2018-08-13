@@ -402,11 +402,11 @@ namespace xt
     inline auto xexpression_assigner<Tag>::resize(xexpression<E1>& e1, const xexpression<E2>& e2)
     -> std::enable_if_t<detail::only_fixed<typename E1::shape_type, typename E2::shape_type>::value, bool>
     {
-        //WIP
         using e1_shape = typename E1::shape_type;
         using e2_shape = typename E2::shape_type;
 
-        using result_shape = promote_shape_t<e1_shape, e2_shape>;
+        using promote = detail::promote_index<e1_shape, e2_shape>;
+        using result_shape = typename promote::type;
         static_assert(std::is_same<e1_shape, result_shape>::value, "Attempted to risize a fixed container");
         constexpr bool trivial_broadcast = std::is_same<e2_shape, result_shape>::value;
         return trivial_broadcast;

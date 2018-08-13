@@ -139,7 +139,7 @@ namespace xt
          * Just like a call to broadcast_shape(cont S1& input, S2& output),
          * except that the result shape is alised as type, and the returned
          * bool is the member value. Asserts on an illegal broadcast, including
-         * the case where pack J is longer than pack I. */
+         * the case where pack I is strictly longer than pack J. */
 
         template <std::size_t... I, std::size_t... J>
         struct broadcast_fixed_shape<fixed_shape<I...>, fixed_shape<J...>>
@@ -248,10 +248,7 @@ namespace xt
         struct select_promote_index;
 
         template <class... S>
-        struct select_promote_index<true, true, S...>
-        {
-            using type = typename promote_fixed<S...>::type;
-        };
+        struct select_promote_index<true, true, S...> : promote_fixed<S...> {};
 
         template <>
         struct select_promote_index<true, true>
@@ -261,10 +258,7 @@ namespace xt
         };
 
         template <class... S>
-        struct select_promote_index<false, true, S...>
-        {
-            using type = typename promote_array<S...>::type;
-        };
+        struct select_promote_index<false, true, S...> : promote_array<S...> {};
 
         template <class... S>
         struct select_promote_index<false, false, S...>
@@ -273,12 +267,7 @@ namespace xt
         };
 
         template <class... S>
-        struct promote_index
-        {
-            using type = typename select_promote_index<only_fixed<S...>::value,
-                                                       only_array<S...>::value,
-                                                       S...>::type;
-        };
+        struct promote_index : select_promote_index<only_fixed<S...>::value, only_array<S...>::value, S...> {};
 
         template <class T>
         struct index_from_shape_impl
