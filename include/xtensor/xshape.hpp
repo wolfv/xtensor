@@ -113,7 +113,7 @@ namespace xt
         {
             //We line the shapes up from the last index
             //IX may underflow, thus being a very large number
-            static constexpr std::size_t IX = JX - (sizeof...(I) - sizeof...(J));
+            static constexpr std::size_t IX = JX - (sizeof...(J) - sizeof...(I));
 
             //Out of bounds access gives value 0
             static constexpr std::size_t I_v = at<IX, I...>::value;
