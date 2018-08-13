@@ -122,7 +122,7 @@ namespace xt
             // we're statically checking if the broadcast shapes are either one on either of them or equal
             static_assert(!I_v ||  I_v == 1 || J_v == 1 || J_v == I_v, "broadcast shapes do not match.");
 
-            static constexpr std::size_t ordinate = std::max(I_v, J_v);
+            static constexpr std::size_t ordinate = (I_v > J_v) ? I_v : J_v;
             static constexpr bool value = (I_v == J_v);
         };
 
