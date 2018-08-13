@@ -1443,22 +1443,22 @@ namespace xt
         using value_type = std::size_t;
         using size_type = std::size_t;
 
-        constexpr static std::size_t size()
+        inline static std::size_t size()
         {
             return sizeof...(X);
         }
 
-        constexpr operator cast_type() const
+        inline operator cast_type() const
         {
             return cast_type({{X...}});
         }
 
-        constexpr auto begin() const
+        inline auto begin() const
         {
             return m_array.begin();
         }
 
-        constexpr auto end() const
+        inline auto end() const
         {
             return m_array.end();
         }
@@ -1473,17 +1473,17 @@ namespace xt
             return m_array.rend();
         }
 
-        constexpr auto cbegin() const
+        inline auto cbegin() const
         {
             return m_array.cbegin();
         }
 
-        constexpr auto cend() const
+        inline auto cend() const
         {
             return m_array.cend();
         }
 
-        constexpr std::size_t operator[](std::size_t idx) const
+        inline std::size_t operator[](std::size_t idx) const
         {
             return m_array[idx];
         }
