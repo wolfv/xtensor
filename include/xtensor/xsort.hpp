@@ -525,7 +525,7 @@ namespace xt
 
         result_type ev = result_type::from_shape({ de.size() });
 
-        C kth_copy = xtl::forward_sequence<C>(kth_container);
+        C kth_copy = xtl::forward_sequence<C, decltype(kth_container)>(kth_container);
         if (kth_copy.size() > 1)
         {
             std::sort(kth_copy.begin(), kth_copy.end());
@@ -622,7 +622,7 @@ namespace xt
             return argpartition<E, C, result_type>(e, kth_container, xnone());
         }
 
-        C kth_copy = xtl::forward_sequence<C>(kth_container);
+        C kth_copy = xtl::forward_sequence<C, decltype(kth_container)>(kth_container);
         if (kth_copy.size() > 1)
         {
             std::sort(kth_copy.begin(), kth_copy.end());
