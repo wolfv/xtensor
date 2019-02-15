@@ -532,7 +532,7 @@ namespace xt
         }
 
         auto arg_lambda = [&de](std::size_t a, std::size_t b) {
-            return de[b] < de[a];
+            return de[a] < de[b];
         };
 
         std::iota(ev.storage_begin(), ev.storage_end(), 0);
