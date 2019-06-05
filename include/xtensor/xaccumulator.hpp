@@ -22,6 +22,9 @@ namespace xt
 {
 
 #define DEFAULT_STRATEGY_ACCUMULATORS evaluation_strategy::immediate_type
+#ifndef DEFAULT_ACCUMULATOR_ITERATION_ORDER
+    #define DEFAULT_ACCUMULATOR_ITERATION_ORDER XTENSOR_DEFAULT_TRAVERSAL
+#endif
 
     /**************
      * accumulate *
@@ -257,12 +260,12 @@ namespace xt
             std::size_t sz = e.size();
             auto result = result_type::from_shape({sz});
 
-            auto it = e.template begin<XTENSOR_DEFAULT_TRAVERSAL>();
+            auto it = e.template begin<DEFAULT_ACCUMULATOR_ITERATION_ORDER>();
 
             result.storage()[0] = xt::get<1>(f)(*it);
             ++it;
 
-            for (std::size_t idx = 0; it != e.template end<XTENSOR_DEFAULT_TRAVERSAL>(); ++it)
+            for (std::size_t idx = 0; it != e.template end<DEFAULT_ACCUMULATOR_ITERATION_ORDER>(); ++it)
             {
                 result.storage()[idx + 1] = xt::get<0>(f)(result.storage()[idx], *it);
                 ++idx;
