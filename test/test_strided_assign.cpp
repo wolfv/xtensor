@@ -196,4 +196,51 @@ namespace xt
             }
         }
     }
+
+    TEST(xassign_strided, simd_broadcast)
+    {
+        xarray<double> x = xarray<double>::from_shape({4, 3, 8});
+        xarray<double> row = xarray<double>::from_shape({8});
+        xarray<double> column = xarray<double>::from_shape({4, 1, 1});
+        xarray<double> result = xarray<double>::from_shape(x.shape());
+        for (std::size_t i = 0; i < x.size(); ++i) x[i] = static_cast<double>(i);
+        for (std::size_t i = 0; i < row.size(); ++i) row[i] = static_cast<double>(i * 2);
+        for (std::size_t i = 0; i < column.size(); ++i) column[i] = static_cast<double>(i * 3);
+
+        noalias(result) = (x + row) * 1.5 - column;
+
+        EXPECT_TRUE(strided_assign_detail::get_loop_sizes(result, (x + row) * 1.5 - column).can_do_strided_assign);
+        for (std::size_t i = 0; i < 4; ++i)
+        {
+            for (std::size_t j = 0; j < 3; ++j)
+            {
+                for (std::size_t k = 0; k < 8; ++k)
+                {
+                    EXPECT_EQ(result(i, j, k), (x(i, j, k) + row(k)) * 1.5 - column(i, 0, 0));
+                }
+            }
+        }
+
+        xarray<double, layout_type::column_major> cx = xarray<double, layout_type::column_major>::from_shape({8, 3, 4});
+        xarray<double, layout_type::column_major> leading = xarray<double, layout_type::column_major>::from_shape({8, 1, 1});
+        xarray<double, layout_type::column_major> rest = xarray<double, layout_type::column_major>::from_shape({1, 3, 4});
+        xarray<double, layout_type::column_major> cresult = xarray<double, layout_type::column_major>::from_shape(cx.shape());
+        for (std::size_t i = 0; i < cx.size(); ++i) cx[i] = static_cast<double>(i);
+        for (std::size_t i = 0; i < leading.size(); ++i) leading[i] = static_cast<double>(i * 2);
+        for (std::size_t i = 0; i < rest.size(); ++i) rest[i] = static_cast<double>(i * 3);
+
+        noalias(cresult) = (cx + leading) * 1.5 - rest;
+
+        EXPECT_TRUE(strided_assign_detail::get_loop_sizes(cresult, (cx + leading) * 1.5 - rest).can_do_strided_assign);
+        for (std::size_t i = 0; i < 8; ++i)
+        {
+            for (std::size_t j = 0; j < 3; ++j)
+            {
+                for (std::size_t k = 0; k < 4; ++k)
+                {
+                    EXPECT_EQ(cresult(i, j, k), (cx(i, j, k) + leading(i, 0, 0)) * 1.5 - rest(0, j, k));
+                }
+            }
+        }
+    }
 }

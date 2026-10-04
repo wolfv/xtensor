@@ -566,6 +566,13 @@ namespace xt
     inline auto xstepper<C>::step_simd() -> simd_return_type<T>
     {
         using simd_type = simd_return_type<T>;
+        const auto& strides = p_c->strides();
+        const bool broadcast = !strides.empty()
+                               && (p_c->layout() == layout_type::column_major ? strides.front() : strides.back()) == 0;
+        if (broadcast)
+        {
+            return simd_type(*m_it);
+        }
         simd_type reg = detail::step_simd_invoker<subiterator_type>::template apply<simd_type>(m_it);
         m_it += xt_simd::revert_simd_traits<simd_type>::size;
         return reg;
