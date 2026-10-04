@@ -20,6 +20,7 @@
 
 #ifdef XTENSOR_BENCHMARK_USE_EIGEN
 #include <Eigen/Core>
+#include <unsupported/Eigen/CXX11/Tensor>
 #endif
 
 #ifdef XTENSOR_BENCHMARK_USE_ARMADILLO
@@ -188,6 +189,41 @@ namespace xt::compare
             benchmark::ClobberMemory();
         }
     }
+
+    void broadcast_dynamic_eigen(benchmark::State& state)
+    {
+        using tensor = Eigen::Tensor<double, 3, Eigen::RowMajor>;
+        tensor x(64, 64, 16), out(64, 64, 16);
+        Eigen::Tensor<double, 1, Eigen::RowMajor> row(16), column(64);
+        for (Eigen::Index i = 0; i < x.size(); ++i) x.data()[i] = 0.5 + double(i % 251) * 0.01;
+        for (Eigen::Index i = 0; i < row.size(); ++i) row(i) = double(i) * 0.25;
+        for (Eigen::Index i = 0; i < column.size(); ++i) column(i) = double(i) * 0.125;
+        const Eigen::array<Eigen::Index, 3> row_shape = {1, 1, 16};
+        const Eigen::array<Eigen::Index, 3> row_broadcast = {64, 64, 1};
+        const Eigen::array<Eigen::Index, 3> column_shape = {64, 1, 1};
+        const Eigen::array<Eigen::Index, 3> column_broadcast = {1, 64, 16};
+        for (auto _ : state)
+        {
+            out = (x + row.reshape(row_shape).broadcast(row_broadcast)) * 1.5
+                  - column.reshape(column_shape).broadcast(column_broadcast);
+            benchmark::DoNotOptimize(out.data());
+            benchmark::ClobberMemory();
+        }
+    }
+
+    void transpose_cast_eigen(benchmark::State& state)
+    {
+        Eigen::Tensor<unsigned char, 3, Eigen::RowMajor> input(128, 256, 3);
+        Eigen::Tensor<float, 3, Eigen::RowMajor> out(3, 128, 256);
+        for (Eigen::Index i = 0; i < input.size(); ++i) input.data()[i] = static_cast<unsigned char>(i % 251);
+        const Eigen::array<Eigen::Index, 3> permutation = {2, 0, 1};
+        for (auto _ : state)
+        {
+            out = input.shuffle(permutation).cast<float>() / 255.0f;
+            benchmark::DoNotOptimize(out.data());
+            benchmark::ClobberMemory();
+        }
+    }
 #endif
 
 #ifdef XTENSOR_BENCHMARK_USE_ARMADILLO
@@ -226,6 +262,8 @@ namespace xt::compare
 #ifdef XTENSOR_BENCHMARK_USE_EIGEN
     BENCHMARK(linear_dynamic_eigen);
     BENCHMARK(linear_fixed_eigen);
+    BENCHMARK(broadcast_dynamic_eigen);
+    BENCHMARK(transpose_cast_eigen);
 #endif
 #ifdef XTENSOR_BENCHMARK_USE_ARMADILLO
     BENCHMARK(linear_dynamic_armadillo);
