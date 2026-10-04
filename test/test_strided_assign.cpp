@@ -199,8 +199,7 @@ namespace xt
         }
     }
 
-#ifdef XTENSOR_USE_XSIMD
-    TEST(xassign_strided, simd_transpose_cast)
+    TEST(xassign_strided, transpose_cast_permutation_plan)
     {
         xarray<unsigned char> input = xarray<unsigned char>::from_shape({4, 16, 3});
         xarray<float> result = xarray<float>::from_shape({3, 4, 16});
@@ -212,8 +211,11 @@ namespace xt
         auto expression = cast<float>(transpose(input, {2, 0, 1})) / 255.0f;
         noalias(result) = expression;
 
+        EXPECT_TRUE(try_permutation_assign(result, expression));
+#ifdef XTENSOR_USE_XSIMD
         EXPECT_TRUE((xassign_traits<decltype(result), decltype(expression)>::simd_strided_assign()));
         EXPECT_TRUE(strided_assign_detail::get_loop_sizes(result, expression).can_do_strided_assign);
+#endif
         for (std::size_t c = 0; c < 3; ++c)
         {
             for (std::size_t i = 0; i < 4; ++i)
@@ -224,8 +226,28 @@ namespace xt
                 }
             }
         }
+
+        xarray<unsigned char> tiled_input = xarray<unsigned char>::from_shape({4, 5, 2});
+        xarray<float> tiled_result = xarray<float>::from_shape({5, 4, 2});
+        for (std::size_t i = 0; i < tiled_input.size(); ++i)
+        {
+            tiled_input.storage()[i] = static_cast<unsigned char>(i);
+        }
+        auto tiled_expression = cast<float>(transpose(tiled_input, {1, 0, 2})) / 7.0f;
+        EXPECT_TRUE(try_permutation_assign(tiled_result, tiled_expression));
+        for (std::size_t i = 0; i < 5; ++i)
+        {
+            for (std::size_t j = 0; j < 4; ++j)
+            {
+                for (std::size_t c = 0; c < 2; ++c)
+                {
+                    EXPECT_EQ(tiled_result(i, j, c), static_cast<float>(tiled_input(j, i, c)) / 7.0f);
+                }
+            }
+        }
     }
 
+#ifdef XTENSOR_USE_XSIMD
     TEST(xassign_strided, simd_broadcast)
     {
         xarray<double> x = xarray<double>::from_shape({4, 3, 8});
@@ -273,4 +295,27 @@ namespace xt
         }
     }
 #endif
+
+    TEST(xassign_strided, runtime_broadcast_plan)
+    {
+        xarray<double> x = xarray<double>::from_shape({3, 4, 5});
+        xarray<double> row = {1.0, 2.0, 3.0, 4.0, 5.0};
+        xarray<double> column = xarray<double>::from_shape({3, 1, 1});
+        xarray<double> result = xarray<double>::from_shape(x.shape());
+        for (std::size_t i = 0; i < x.size(); ++i) x.storage()[i] = static_cast<double>(i);
+        for (std::size_t i = 0; i < column.size(); ++i) column.storage()[i] = static_cast<double>(i * 3);
+        auto expression = (x + row) * 1.5 - column;
+
+        EXPECT_TRUE(detail::try_runtime_plan(result, expression, false));
+        for (std::size_t i = 0; i < 3; ++i)
+        {
+            for (std::size_t j = 0; j < 4; ++j)
+            {
+                for (std::size_t k = 0; k < 5; ++k)
+                {
+                    EXPECT_EQ(result(i, j, k), (x(i, j, k) + row(k)) * 1.5 - column(i, 0, 0));
+                }
+            }
+        }
+    }
 }
