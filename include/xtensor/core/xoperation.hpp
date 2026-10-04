@@ -155,12 +155,15 @@ namespace xt
                     return static_cast<R>(arg);
                 }
 
-                // SIMD conversion disabled for now since it does not make sense
-                // in most of the cases
-                /*constexpr simd_result_type simd_apply(const simd_value_type& arg) const
+                template <
+                    class B,
+                    std::enable_if_t<
+                        std::is_same<R, typename xt_simd::revert_simd_traits<B>::type>::value,
+                        int> = 0>
+                constexpr B simd_apply(const B& arg) const
                 {
-                    return static_cast<R>(arg);
-                }*/
+                    return arg;
+                }
             };
         };
 

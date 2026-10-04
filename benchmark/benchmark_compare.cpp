@@ -119,8 +119,9 @@ namespace xt::compare
         constexpr std::size_t height = 128;
         constexpr std::size_t width = 256;
         constexpr std::size_t channels = 3;
-        std::vector<unsigned char> input(height * width * channels, 127);
+        std::vector<unsigned char> input(height * width * channels);
         std::vector<float> out(input.size());
+        for (std::size_t i = 0; i < input.size(); ++i) input[i] = static_cast<unsigned char>(i % 251);
         for (auto _ : state)
         {
             for (std::size_t c = 0; c < channels; ++c)
@@ -142,7 +143,7 @@ namespace xt::compare
     {
         xarray<unsigned char> input = xarray<unsigned char>::from_shape({128, 256, 3});
         xarray<float> out = xarray<float>::from_shape({3, 128, 256});
-        std::fill(input.begin(), input.end(), 127);
+        for (std::size_t i = 0; i < input.size(); ++i) input.storage()[i] = static_cast<unsigned char>(i % 251);
         for (auto _ : state)
         {
             noalias(out) = cast<float>(transpose(input, {2, 0, 1})) / 255.0f;

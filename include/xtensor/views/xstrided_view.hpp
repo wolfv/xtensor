@@ -313,6 +313,19 @@ namespace xt
         friend class xaxis_slice_iterator;
     };
 
+    namespace detail
+    {
+        template <class CT, class S, layout_type L, class FST, class T>
+        struct has_strided_simd_interface<xstrided_view<CT, S, L, FST>, T>
+            : std::conjunction<
+                  has_simd_type<T>,
+                  std::bool_constant<xt_simd::simd_condition<typename xstrided_view<CT, S, L, FST>::value_type, T>::value>,
+                  std::is_lvalue_reference<typename xstrided_view<CT, S, L, FST>::const_reference>,
+                  std::bool_constant<is_specialization_of<inner_storage_getter, FST>::value>>
+        {
+        };
+    }
+
     /**************************
      * xstrided_view builders *
      **************************/

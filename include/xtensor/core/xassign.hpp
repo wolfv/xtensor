@@ -320,6 +320,31 @@ namespace xt
             static constexpr bool value = std::conjunction<use_strided_loop<std::decay_t<CT>>...>::value;
         };
 
+        template <class E, class T>
+        struct has_strided_simd_interface : has_simd_interface<E, T>
+        {
+        };
+
+        template <class F, class T, class... CT>
+        struct has_strided_simd_interface<xfunction<F, CT...>, T>
+            : std::conjunction<
+                  has_simd_type<T>,
+                  has_simd_apply<F, xt_simd::simd_type<T>>,
+                  has_strided_simd_interface<std::decay_t<CT>, T>...>
+        {
+        };
+
+        template <class E>
+        struct supports_row_major_gather : std::bool_constant<E::static_layout != layout_type::column_major>
+        {
+        };
+
+        template <class F, class... CT>
+        struct supports_row_major_gather<xfunction<F, CT...>>
+            : std::conjunction<supports_row_major_gather<std::decay_t<CT>>...>
+        {
+        };
+
         /**
          * Considering the assignment LHS = RHS, if the requested value type used for
          * loading simd from RHS is not complex while LHS value_type is complex,
@@ -423,7 +448,9 @@ namespace xt
 
         static constexpr bool simd_strided_assign()
         {
-            return strided_assign() && simd_assign();
+            return strided_assign() && convertible_types() && simd_size()
+                   && detail::has_strided_simd_interface<E1, requested_value_type>::value
+                   && detail::has_strided_simd_interface<E2, requested_value_type>::value;
         }
 
         static constexpr bool simd_linear_assign(const E1& e1, const E2& e2)
@@ -1045,8 +1072,19 @@ namespace xt
 
             if (is_row_major)
             {
-                auto csf = check_strides_functor<layout_type::row_major, decltype(e1.strides())>(e1.strides());
-                cut = csf(e2);
+                if constexpr (
+                    possible && E1::contiguous_layout && E1::static_layout == layout_type::row_major
+                    && xt::detail::supports_row_major_gather<E2>::value)
+                {
+                    // SIMD steppers can broadcast and gather arbitrary row-major input strides.
+                    cut = e1.strides().size() - 1;
+                }
+                else
+                {
+                    auto csf = check_strides_functor<layout_type::row_major, decltype(e1.strides())>(e1.strides());
+                    cut = csf(e2);
+                }
+
                 // This makes that only one dimension will be treated in the inner loop.
                 if (cut < e1.strides().size() - 1)
                 {
@@ -1054,7 +1092,7 @@ namespace xt
                     cut = e1.strides().size() - 1;
                 }
             }
-            else if (!is_row_major)
+            else
             {
                 auto csf = check_strides_functor<layout_type::column_major, decltype(e1.strides())>(e1.strides()
                 );
@@ -1064,7 +1102,7 @@ namespace xt
                     // Only make the inner loop go over one dimension by default for now
                     cut = 1;
                 }
-            }  // can't reach here because this would have already triggered the fallback
+            }
 
             std::size_t outer_loop_size = static_cast<std::size_t>(std::accumulate(
                 e1.shape().begin(),

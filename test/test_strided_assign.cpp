@@ -16,6 +16,8 @@
 #include "xtensor/core/xassign.hpp"
 #include "xtensor/core/xlayout.hpp"
 #include "xtensor/core/xnoalias.hpp"
+#include "xtensor/core/xoperation.hpp"
+#include "xtensor/views/xstrided_view.hpp"
 #include "xtensor/views/xview.hpp"
 
 #include "test_common.hpp"
@@ -197,15 +199,42 @@ namespace xt
         }
     }
 
+#ifdef XTENSOR_USE_XSIMD
+    TEST(xassign_strided, simd_transpose_cast)
+    {
+        xarray<unsigned char> input = xarray<unsigned char>::from_shape({4, 16, 3});
+        xarray<float> result = xarray<float>::from_shape({3, 4, 16});
+        for (std::size_t i = 0; i < input.size(); ++i)
+        {
+            input.storage()[i] = static_cast<unsigned char>(i % 251);
+        }
+
+        auto expression = cast<float>(transpose(input, {2, 0, 1})) / 255.0f;
+        noalias(result) = expression;
+
+        EXPECT_TRUE((xassign_traits<decltype(result), decltype(expression)>::simd_strided_assign()));
+        EXPECT_TRUE(strided_assign_detail::get_loop_sizes(result, expression).can_do_strided_assign);
+        for (std::size_t c = 0; c < 3; ++c)
+        {
+            for (std::size_t i = 0; i < 4; ++i)
+            {
+                for (std::size_t j = 0; j < 16; ++j)
+                {
+                    EXPECT_EQ(result(c, i, j), static_cast<float>(input(i, j, c)) / 255.0f);
+                }
+            }
+        }
+    }
+
     TEST(xassign_strided, simd_broadcast)
     {
         xarray<double> x = xarray<double>::from_shape({4, 3, 8});
         xarray<double> row = xarray<double>::from_shape({8});
         xarray<double> column = xarray<double>::from_shape({4, 1, 1});
         xarray<double> result = xarray<double>::from_shape(x.shape());
-        for (std::size_t i = 0; i < x.size(); ++i) x[i] = static_cast<double>(i);
-        for (std::size_t i = 0; i < row.size(); ++i) row[i] = static_cast<double>(i * 2);
-        for (std::size_t i = 0; i < column.size(); ++i) column[i] = static_cast<double>(i * 3);
+        for (std::size_t i = 0; i < x.size(); ++i) x.storage()[i] = static_cast<double>(i);
+        for (std::size_t i = 0; i < row.size(); ++i) row.storage()[i] = static_cast<double>(i * 2);
+        for (std::size_t i = 0; i < column.size(); ++i) column.storage()[i] = static_cast<double>(i * 3);
 
         noalias(result) = (x + row) * 1.5 - column;
 
@@ -225,9 +254,9 @@ namespace xt
         xarray<double, layout_type::column_major> leading = xarray<double, layout_type::column_major>::from_shape({8, 1, 1});
         xarray<double, layout_type::column_major> rest = xarray<double, layout_type::column_major>::from_shape({1, 3, 4});
         xarray<double, layout_type::column_major> cresult = xarray<double, layout_type::column_major>::from_shape(cx.shape());
-        for (std::size_t i = 0; i < cx.size(); ++i) cx[i] = static_cast<double>(i);
-        for (std::size_t i = 0; i < leading.size(); ++i) leading[i] = static_cast<double>(i * 2);
-        for (std::size_t i = 0; i < rest.size(); ++i) rest[i] = static_cast<double>(i * 3);
+        for (std::size_t i = 0; i < cx.size(); ++i) cx.storage()[i] = static_cast<double>(i);
+        for (std::size_t i = 0; i < leading.size(); ++i) leading.storage()[i] = static_cast<double>(i * 2);
+        for (std::size_t i = 0; i < rest.size(); ++i) rest.storage()[i] = static_cast<double>(i * 3);
 
         noalias(cresult) = (cx + leading) * 1.5 - rest;
 
@@ -243,4 +272,5 @@ namespace xt
             }
         }
     }
+#endif
 }
