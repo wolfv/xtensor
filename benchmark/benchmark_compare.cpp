@@ -48,7 +48,10 @@ namespace xt::compare
     {
         const std::vector<std::size_t> shape = {64, 64, 16};
         xarray<double> x, y, z, out;
-        x.resize(shape); y.resize(shape); z.resize(shape); out.resize(shape);
+        x.resize(shape);
+        y.resize(shape);
+        z.resize(shape);
+        out.resize(shape);
         init(x, y, z, dynamic_size);
         for (auto _ : state)
         {
@@ -77,12 +80,21 @@ namespace xt::compare
     {
         const std::vector<std::size_t> shape = {64, 64, 16};
         xarray<double> x, row, column, out;
-        x.resize(shape); row.resize({16}); column.resize({64, 1, 1}); out.resize(shape);
+        x.resize(shape);
+        row.resize({16});
+        column.resize({64, 1, 1});
+        out.resize(shape);
         xarray<double> unused;
         unused.resize(shape);
         init(x, unused, out, dynamic_size);
-        for (std::size_t i = 0; i < row.size(); ++i) row[i] = double(i) * 0.25;
-        for (std::size_t i = 0; i < column.size(); ++i) column[i] = double(i) * 0.125;
+        for (std::size_t i = 0; i < row.size(); ++i)
+        {
+            row[i] = double(i) * 0.25;
+        }
+        for (std::size_t i = 0; i < column.size(); ++i)
+        {
+            column[i] = double(i) * 0.125;
+        }
         for (auto _ : state)
         {
             noalias(out) = (x + row) * 1.5 - column;
@@ -95,8 +107,14 @@ namespace xt::compare
     {
         std::vector<double> x(dynamic_size), row(16), column(64), out(dynamic_size), unused(dynamic_size);
         init(x, unused, out, dynamic_size);
-        for (std::size_t i = 0; i < row.size(); ++i) row[i] = double(i) * 0.25;
-        for (std::size_t i = 0; i < column.size(); ++i) column[i] = double(i) * 0.125;
+        for (std::size_t i = 0; i < row.size(); ++i)
+        {
+            row[i] = double(i) * 0.25;
+        }
+        for (std::size_t i = 0; i < column.size(); ++i)
+        {
+            column[i] = double(i) * 0.125;
+        }
         for (auto _ : state)
         {
             for (std::size_t i = 0; i < 64; ++i)
@@ -122,7 +140,10 @@ namespace xt::compare
         constexpr std::size_t channels = 3;
         std::vector<unsigned char> input(height * width * channels);
         std::vector<float> out(input.size());
-        for (std::size_t i = 0; i < input.size(); ++i) input[i] = static_cast<unsigned char>(i % 251);
+        for (std::size_t i = 0; i < input.size(); ++i)
+        {
+            input[i] = static_cast<unsigned char>(i % 251);
+        }
         for (auto _ : state)
         {
             for (std::size_t c = 0; c < channels; ++c)
@@ -131,7 +152,8 @@ namespace xt::compare
                 {
                     for (std::size_t j = 0; j < width; ++j)
                     {
-                        out[(c * height + i) * width + j] = float(input[(i * width + j) * channels + c]) / 255.0f;
+                        out[(c * height + i) * width + j] = float(input[(i * width + j) * channels + c])
+                                                            / 255.0f;
                     }
                 }
             }
@@ -144,7 +166,10 @@ namespace xt::compare
     {
         xarray<unsigned char> input = xarray<unsigned char>::from_shape({128, 256, 3});
         xarray<float> out = xarray<float>::from_shape({3, 128, 256});
-        for (std::size_t i = 0; i < input.size(); ++i) input.storage()[i] = static_cast<unsigned char>(i % 251);
+        for (std::size_t i = 0; i < input.size(); ++i)
+        {
+            input.storage()[i] = static_cast<unsigned char>(i % 251);
+        }
         for (auto _ : state)
         {
             noalias(out) = cast<float>(transpose(input, {2, 0, 1})) / 255.0f;
@@ -195,9 +220,18 @@ namespace xt::compare
         using tensor = Eigen::Tensor<double, 3, Eigen::RowMajor>;
         tensor x(64, 64, 16), out(64, 64, 16);
         Eigen::Tensor<double, 1, Eigen::RowMajor> row(16), column(64);
-        for (Eigen::Index i = 0; i < x.size(); ++i) x.data()[i] = 0.5 + double(i % 251) * 0.01;
-        for (Eigen::Index i = 0; i < row.size(); ++i) row(i) = double(i) * 0.25;
-        for (Eigen::Index i = 0; i < column.size(); ++i) column(i) = double(i) * 0.125;
+        for (Eigen::Index i = 0; i < x.size(); ++i)
+        {
+            x.data()[i] = 0.5 + double(i % 251) * 0.01;
+        }
+        for (Eigen::Index i = 0; i < row.size(); ++i)
+        {
+            row(i) = double(i) * 0.25;
+        }
+        for (Eigen::Index i = 0; i < column.size(); ++i)
+        {
+            column(i) = double(i) * 0.125;
+        }
         const Eigen::array<Eigen::Index, 3> row_shape = {1, 1, 16};
         const Eigen::array<Eigen::Index, 3> row_broadcast = {64, 64, 1};
         const Eigen::array<Eigen::Index, 3> column_shape = {64, 1, 1};
@@ -215,7 +249,10 @@ namespace xt::compare
     {
         Eigen::Tensor<unsigned char, 3, Eigen::RowMajor> input(128, 256, 3);
         Eigen::Tensor<float, 3, Eigen::RowMajor> out(3, 128, 256);
-        for (Eigen::Index i = 0; i < input.size(); ++i) input.data()[i] = static_cast<unsigned char>(i % 251);
+        for (Eigen::Index i = 0; i < input.size(); ++i)
+        {
+            input.data()[i] = static_cast<unsigned char>(i % 251);
+        }
         const Eigen::array<Eigen::Index, 3> permutation = {2, 0, 1};
         for (auto _ : state)
         {

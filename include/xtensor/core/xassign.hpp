@@ -342,15 +342,13 @@ namespace xt
         {
         };
 
-        template <class E, class = void>
+        template <class E, bool = !std::is_same<typename E::value_type, bool>::value, class = void>
         struct runtime_plan_expression : std::false_type
         {
         };
 
         template <class E>
-        struct runtime_plan_expression<
-            E,
-            std::void_t<decltype(std::declval<const E&>().storage().data())>>
+        struct runtime_plan_expression<E, true, std::void_t<decltype(std::declval<const E&>().storage().data())>>
             : std::bool_constant<
                   data_interface_expression<E> && std::is_arithmetic<typename E::value_type>::value
                   && std::is_pointer<decltype(std::declval<const E&>().storage().data())>::value
@@ -361,17 +359,18 @@ namespace xt
         };
 
         template <class T>
-        struct runtime_plan_expression<xscalar<T>, void> : std::bool_constant<std::is_arithmetic<T>::value>
+        struct runtime_plan_expression<xscalar<T>, true, void>
+            : std::bool_constant<std::is_arithmetic<T>::value>
         {
         };
 
         template <class F, class... CT>
-        struct runtime_plan_expression<xfunction<F, CT...>, void>
+        struct runtime_plan_expression<xfunction<F, CT...>, true, void>
             : std::conjunction<runtime_plan_expression<std::decay_t<CT>>...>
         {
         };
 
-        template <class E, class = void>
+        template <class E, bool = !std::is_same<typename E::value_type, bool>::value, class = void>
         struct runtime_plan_output : std::false_type
         {
         };
@@ -379,9 +378,8 @@ namespace xt
         template <class E>
         struct runtime_plan_output<
             E,
-            std::void_t<
-                decltype(std::declval<E&>().storage().data()),
-                decltype(std::declval<E&>().data_offset())>>
+            true,
+            std::void_t<decltype(std::declval<E&>().storage().data()), decltype(std::declval<E&>().data_offset())>>
             : std::bool_constant<
                   E::contiguous_layout && E::static_layout == layout_type::row_major
                   && std::is_pointer<decltype(std::declval<E&>().storage().data())>::value
@@ -434,7 +432,10 @@ namespace xt
             auto operator()(std::size_t i, std::size_t j, std::size_t k) const
             {
                 return std::apply(
-                    [&](const auto&... argument) { return functor(argument(i, j, k)...); },
+                    [&](const auto&... argument)
+                    {
+                        return functor(argument(i, j, k)...);
+                    },
                     arguments
                 );
             }
@@ -499,8 +500,7 @@ namespace xt
             {
                 return false;
             }
-            if constexpr (
-                runtime_plan_output<E1>::value && runtime_plan_expression<E2>::value)
+            if constexpr (runtime_plan_output<E1>::value && runtime_plan_expression<E2>::value)
             {
                 if (dst.dimension() == 3 && expression.dimension() <= 3)
                 {
@@ -1266,16 +1266,16 @@ namespace xt
 
             if (is_row_major)
             {
-                if constexpr (
-                    possible && E1::contiguous_layout && E1::static_layout == layout_type::row_major
-                    && xt::detail::supports_row_major_gather<E2>::value)
+                if constexpr (possible && E1::contiguous_layout && E1::static_layout == layout_type::row_major && xt::detail::supports_row_major_gather<E2>::value)
                 {
                     // SIMD steppers can broadcast and gather arbitrary row-major input strides.
                     cut = e1.strides().size() - 1;
                 }
                 else
                 {
-                    auto csf = check_strides_functor<layout_type::row_major, decltype(e1.strides())>(e1.strides());
+                    auto csf = check_strides_functor<layout_type::row_major, decltype(e1.strides())>(
+                        e1.strides()
+                    );
                     cut = csf(e2);
                 }
 

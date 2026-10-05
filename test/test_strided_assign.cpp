@@ -201,8 +201,11 @@ namespace xt
 
     TEST(xassign_strided, transpose_cast_permutation_plan)
     {
-        xarray<unsigned char> input = xarray<unsigned char>::from_shape({4, 16, 3});
-        xarray<float> result = xarray<float>::from_shape({3, 4, 16});
+        xarray<unsigned char, layout_type::row_major>
+            input = xarray<unsigned char, layout_type::row_major>::from_shape({4, 16, 3});
+        xarray<float, layout_type::row_major> result = xarray<float, layout_type::row_major>::from_shape(
+            {3, 4, 16}
+        );
         for (std::size_t i = 0; i < input.size(); ++i)
         {
             input.storage()[i] = static_cast<unsigned char>(i % 251);
@@ -227,8 +230,11 @@ namespace xt
             }
         }
 
-        xarray<unsigned char> tiled_input = xarray<unsigned char>::from_shape({4, 5, 2});
-        xarray<float> tiled_result = xarray<float>::from_shape({5, 4, 2});
+        xarray<unsigned char, layout_type::row_major>
+            tiled_input = xarray<unsigned char, layout_type::row_major>::from_shape({4, 5, 2});
+        xarray<float, layout_type::row_major> tiled_result = xarray<float, layout_type::row_major>::from_shape(
+            {5, 4, 2}
+        );
         for (std::size_t i = 0; i < tiled_input.size(); ++i)
         {
             tiled_input.storage()[i] = static_cast<unsigned char>(i);
@@ -254,13 +260,23 @@ namespace xt
         xarray<double> row = xarray<double>::from_shape({8});
         xarray<double> column = xarray<double>::from_shape({4, 1, 1});
         xarray<double> result = xarray<double>::from_shape(x.shape());
-        for (std::size_t i = 0; i < x.size(); ++i) x.storage()[i] = static_cast<double>(i);
-        for (std::size_t i = 0; i < row.size(); ++i) row.storage()[i] = static_cast<double>(i * 2);
-        for (std::size_t i = 0; i < column.size(); ++i) column.storage()[i] = static_cast<double>(i * 3);
+        for (std::size_t i = 0; i < x.size(); ++i)
+        {
+            x.storage()[i] = static_cast<double>(i);
+        }
+        for (std::size_t i = 0; i < row.size(); ++i)
+        {
+            row.storage()[i] = static_cast<double>(i * 2);
+        }
+        for (std::size_t i = 0; i < column.size(); ++i)
+        {
+            column.storage()[i] = static_cast<double>(i * 3);
+        }
 
         noalias(result) = (x + row) * 1.5 - column;
 
-        EXPECT_TRUE(strided_assign_detail::get_loop_sizes(result, (x + row) * 1.5 - column).can_do_strided_assign);
+        EXPECT_TRUE(strided_assign_detail::get_loop_sizes(result, (x + row) * 1.5 - column).can_do_strided_assign
+        );
         for (std::size_t i = 0; i < 4; ++i)
         {
             for (std::size_t j = 0; j < 3; ++j)
@@ -272,17 +288,36 @@ namespace xt
             }
         }
 
-        xarray<double, layout_type::column_major> cx = xarray<double, layout_type::column_major>::from_shape({8, 3, 4});
-        xarray<double, layout_type::column_major> leading = xarray<double, layout_type::column_major>::from_shape({8, 1, 1});
-        xarray<double, layout_type::column_major> rest = xarray<double, layout_type::column_major>::from_shape({1, 3, 4});
-        xarray<double, layout_type::column_major> cresult = xarray<double, layout_type::column_major>::from_shape(cx.shape());
-        for (std::size_t i = 0; i < cx.size(); ++i) cx.storage()[i] = static_cast<double>(i);
-        for (std::size_t i = 0; i < leading.size(); ++i) leading.storage()[i] = static_cast<double>(i * 2);
-        for (std::size_t i = 0; i < rest.size(); ++i) rest.storage()[i] = static_cast<double>(i * 3);
+        xarray<double, layout_type::column_major> cx = xarray<double, layout_type::column_major>::from_shape(
+            {8, 3, 4}
+        );
+        xarray<double, layout_type::column_major> leading = xarray<double, layout_type::column_major>::from_shape(
+            {8, 1, 1}
+        );
+        xarray<double, layout_type::column_major> rest = xarray<double, layout_type::column_major>::from_shape(
+            {1, 3, 4}
+        );
+        xarray<double, layout_type::column_major> cresult = xarray<double, layout_type::column_major>::from_shape(
+            cx.shape()
+        );
+        for (std::size_t i = 0; i < cx.size(); ++i)
+        {
+            cx.storage()[i] = static_cast<double>(i);
+        }
+        for (std::size_t i = 0; i < leading.size(); ++i)
+        {
+            leading.storage()[i] = static_cast<double>(i * 2);
+        }
+        for (std::size_t i = 0; i < rest.size(); ++i)
+        {
+            rest.storage()[i] = static_cast<double>(i * 3);
+        }
 
         noalias(cresult) = (cx + leading) * 1.5 - rest;
 
-        EXPECT_TRUE(strided_assign_detail::get_loop_sizes(cresult, (cx + leading) * 1.5 - rest).can_do_strided_assign);
+        EXPECT_TRUE(
+            strided_assign_detail::get_loop_sizes(cresult, (cx + leading) * 1.5 - rest).can_do_strided_assign
+        );
         for (std::size_t i = 0; i < 8; ++i)
         {
             for (std::size_t j = 0; j < 3; ++j)
@@ -298,12 +333,22 @@ namespace xt
 
     TEST(xassign_strided, runtime_broadcast_plan)
     {
-        xarray<double> x = xarray<double>::from_shape({3, 4, 5});
-        xarray<double> row = {1.0, 2.0, 3.0, 4.0, 5.0};
-        xarray<double> column = xarray<double>::from_shape({3, 1, 1});
-        xarray<double> result = xarray<double>::from_shape(x.shape());
-        for (std::size_t i = 0; i < x.size(); ++i) x.storage()[i] = static_cast<double>(i);
-        for (std::size_t i = 0; i < column.size(); ++i) column.storage()[i] = static_cast<double>(i * 3);
+        xarray<double, layout_type::row_major> x = xarray<double, layout_type::row_major>::from_shape({3, 4, 5});
+        xarray<double, layout_type::row_major> row = {1.0, 2.0, 3.0, 4.0, 5.0};
+        xarray<double, layout_type::row_major> column = xarray<double, layout_type::row_major>::from_shape(
+            {3, 1, 1}
+        );
+        xarray<double, layout_type::row_major> result = xarray<double, layout_type::row_major>::from_shape(
+            x.shape()
+        );
+        for (std::size_t i = 0; i < x.size(); ++i)
+        {
+            x.storage()[i] = static_cast<double>(i);
+        }
+        for (std::size_t i = 0; i < column.size(); ++i)
+        {
+            column.storage()[i] = static_cast<double>(i * 3);
+        }
         auto expression = (x + row) * 1.5 - column;
 
         EXPECT_TRUE(detail::try_runtime_plan(result, expression, false));

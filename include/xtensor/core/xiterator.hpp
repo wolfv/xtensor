@@ -568,7 +568,8 @@ namespace xt
         using simd_type = simd_return_type<T>;
         const auto& strides = p_c->strides();
         const bool broadcast = !strides.empty()
-                               && (p_c->layout() == layout_type::column_major ? strides.front() : strides.back()) == 0;
+                               && (p_c->layout() == layout_type::column_major ? strides.front() : strides.back()
+                                  ) == 0;
         if (broadcast)
         {
             return simd_type(*m_it);
@@ -581,7 +582,8 @@ namespace xt
             {
                 using index_value_type = xsimd::as_integer_t<typename simd_type::value_type>;
                 using arch_type = typename simd_type::arch_type;
-                xsimd::batch<index_value_type, arch_type> index = xsimd::make_iota_batch_constant<index_value_type, arch_type>();
+                xsimd::batch<index_value_type, arch_type>
+                    index = xsimd::make_iota_batch_constant<index_value_type, arch_type>();
                 index *= static_cast<index_value_type>(stride);
                 simd_type reg = simd_type::gather(&(*m_it), index);
                 m_it += static_cast<difference_type>(xt_simd::revert_simd_traits<simd_type>::size * stride);

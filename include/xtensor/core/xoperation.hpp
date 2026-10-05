@@ -159,9 +159,7 @@ namespace xt
 
                 template <
                     class B,
-                    std::enable_if_t<
-                        std::is_same<R, typename xt_simd::revert_simd_traits<B>::type>::value,
-                        int> = 0>
+                    std::enable_if_t<std::is_same<R, typename xt_simd::revert_simd_traits<B>::type>::value, int> = 0>
                 constexpr B simd_apply(const B& arg) const
                 {
                     return arg;
@@ -187,8 +185,7 @@ namespace xt
 
         template <class CT, class S, layout_type L, class FST>
         struct permutation_view<xstrided_view<CT, S, L, FST>>
-            : std::bool_constant<
-                  L == layout_type::dynamic && is_specialization_of<inner_storage_getter, FST>::value>
+            : std::bool_constant<L == layout_type::dynamic && is_specialization_of<inner_storage_getter, FST>::value>
         {
         };
 
@@ -206,8 +203,7 @@ namespace xt
             const std::size_t dst_stride_c = static_cast<std::size_t>(dst.strides()[C]);
             auto* src_data = src.data() + src.data_offset();
             auto* dst_data = dst.data() + dst.data_offset();
-            if (
-                shape_c == 3 && src_stride_c == 1 && src_stride_b == 3 && src_stride_a == shape_b * 3
+            if (shape_c == 3 && src_stride_c == 1 && src_stride_b == 3 && src_stride_a == shape_b * 3
                 && dst_stride_b == 1 && dst_stride_a == shape_b && dst_stride_c == shape_a * shape_b)
             {
                 const std::size_t plane_size = shape_a * shape_b;
@@ -237,7 +233,8 @@ namespace xt
                             {
                                 const auto src_offset = a * src_stride_a + b * src_stride_b + c * src_stride_c;
                                 const auto dst_offset = a * dst_stride_a + b * dst_stride_b + c * dst_stride_c;
-                                dst_data[dst_offset] = static_cast<R>(src_data[src_offset]) / static_cast<R>(scale);
+                                dst_data[dst_offset] = static_cast<R>(src_data[src_offset])
+                                                       / static_cast<R>(scale);
                             }
                         }
                     }
@@ -255,7 +252,14 @@ namespace xt
             }
 
             std::array<std::size_t, 3> axes = {0, 1, 2};
-            std::sort(axes.begin(), axes.end(), [&](auto lhs, auto rhs) { return src.strides()[lhs] > src.strides()[rhs]; });
+            std::sort(
+                axes.begin(),
+                axes.end(),
+                [&](auto lhs, auto rhs)
+                {
+                    return src.strides()[lhs] > src.strides()[rhs];
+                }
+            );
             if (src.strides()[axes[2]] != 1
                 || static_cast<std::size_t>(src.strides()[axes[1]]) != src.shape()[axes[2]]
                 || static_cast<std::size_t>(src.strides()[axes[0]])
@@ -264,11 +268,11 @@ namespace xt
                 return false;
             }
 
-#define XTENSOR_RUN_PERMUTATION(A, B, C) \
-    if (axes == std::array<std::size_t, 3>{A, B, C}) \
-    { \
+#define XTENSOR_RUN_PERMUTATION(A, B, C)                            \
+    if (axes == std::array<std::size_t, 3>{A, B, C})                \
+    {                                                               \
         run_permutation_assign<A, B, C, E1, V, R>(dst, src, scale); \
-        return true; \
+        return true;                                                \
     }
             XTENSOR_RUN_PERMUTATION(0, 1, 2)
             XTENSOR_RUN_PERMUTATION(0, 2, 1)
@@ -334,10 +338,7 @@ namespace xt
             const auto& view = std::get<0>(cast_expression.arguments());
             using view_type = std::decay_t<decltype(view)>;
             using cast_result_type = typename detail::cast_expression<cast_expression_type>::result_type;
-            if constexpr (
-                detail::permutation_view<view_type>::value
-                && std::is_same<cast_result_type, typename E1::value_type>::value
-                && std::is_floating_point<cast_result_type>::value)
+            if constexpr (detail::permutation_view<view_type>::value && std::is_same<cast_result_type, typename E1::value_type>::value && std::is_floating_point<cast_result_type>::value)
             {
                 return detail::try_3d_permutation_assign<E1, view_type, cast_result_type>(
                     dst,
