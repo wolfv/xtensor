@@ -1377,6 +1377,7 @@ namespace xt
         {
             step_dim = cut;
         }
+        const std::size_t leading_dim = is_row_major ? loop_sizes.dimension - 1 : 0;
 #if defined(XTENSOR_USE_OPENMP) && defined(strided_parallel_assign)
         if (outer_loop_size >= XTENSOR_OPENMP_TRESHOLD / inner_loop_size)
         {
@@ -1405,8 +1406,8 @@ namespace xt
                 for (std::size_t i = 0; i < simd_rest; ++i)
                 {
                     *(res_stepper) = conditional_cast<needs_cast, e1_value_type>(*(fct_stepper));
-                    res_stepper.step_leading();
-                    fct_stepper.step_leading();
+                    res_stepper.step(leading_dim);
+                    fct_stepper.step(leading_dim);
                 }
 
                 // next unaligned index
@@ -1480,8 +1481,8 @@ namespace xt
                         for (std::size_t i = 0; i < simd_rest; ++i)
                         {
                             *(res_stepper) = conditional_cast<needs_cast, e1_value_type>(*(fct_stepper));
-                            res_stepper.step_leading();
-                            fct_stepper.step_leading();
+                            res_stepper.step(leading_dim);
+                            fct_stepper.step(leading_dim);
                         }
 
                         // next unaligned index
@@ -1526,8 +1527,8 @@ namespace xt
                 for (std::size_t i = 0; i < simd_rest; ++i)
                 {
                     *(res_stepper) = conditional_cast<needs_cast, e1_value_type>(*(fct_stepper));
-                    res_stepper.step_leading();
-                    fct_stepper.step_leading();
+                    res_stepper.step(leading_dim);
+                    fct_stepper.step(leading_dim);
                 }
 
                 is_row_major
