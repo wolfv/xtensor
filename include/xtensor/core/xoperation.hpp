@@ -156,17 +156,6 @@ namespace xt
                 {
                     return static_cast<R>(arg);
                 }
-
-                template <
-                    class B,
-                    std::enable_if_t<
-                        std::is_floating_point<R>::value
-                            && std::is_same<R, typename xt_simd::revert_simd_traits<B>::type>::value,
-                        int> = 0>
-                constexpr B simd_apply(const B& arg) const
-                {
-                    return arg;
-                }
             };
         };
 

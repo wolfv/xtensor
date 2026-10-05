@@ -810,8 +810,7 @@ namespace xt
 
             for (; s2_index != 0; --s1_index, --s2_index)
             {
-                if (static_cast<value_type>(s2[s2_index - 1]) != value_type(0)
-                    && static_cast<value_type>(s1[s1_index - 1]) != static_cast<value_type>(s2[s2_index - 1]))
+                if (static_cast<value_type>(s1[s1_index - 1]) != static_cast<value_type>(s2[s2_index - 1]))
                 {
                     break;
                 }
@@ -842,8 +841,7 @@ namespace xt
 
             for (; index < size; ++index)
             {
-                if (static_cast<value_type>(s2[index]) != value_type(0)
-                    && static_cast<value_type>(s1[index]) != static_cast<value_type>(s2[index]))
+                if (static_cast<value_type>(s1[index]) != static_cast<value_type>(s2[index]))
                 {
                     break;
                 }
